@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS custom properties — all design tokens live here */
+:root {
+  --color-bg:         #FAF8F5;
+  --color-bg-subtle:  #F3F0EA;
+  --color-surface:    #EDEBE4;
+  --color-border:     #E5E0D8;
+  --color-text:       #1A1714;
+  --color-muted:      #8C8680;
+  --color-accent:     #F76B15;
+  --color-accent-dim: #FDE8D8;
+}
+
+html, body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular numerals for the elapsed timer so digit widths stay fixed */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* State transition fades */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Reduced-motion: keep state transitions instant */
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+}
