@@ -304,14 +304,18 @@ function closePlayer() {
 async function downloadOne(rec) {
   rec.downloading = true
   try {
-    const { data, error: signErr } = await adminClient.storage
-      .from(BUCKET)
-      .createSignedUrl(rec.file_path, 300, { download: true })
-
-    if (signErr || !data?.signedUrl) throw signErr || new Error('No URL')
-
+    // Build the filename first so we can pass it into createSignedUrl.
+    // Supabase sets Content-Disposition from the `download` option — that
+    // header wins over the <a download="..."> attribute, so we must set it
+    // server-side to control what the browser saves the file as.
     const ext      = friendlyExt(rec.file_path, rec.mime_type)
     const filename = `${safeNameSegment(rec.display_name)}.${ext}`
+
+    const { data, error: signErr } = await adminClient.storage
+      .from(BUCKET)
+      .createSignedUrl(rec.file_path, 300, { download: filename })
+
+    if (signErr || !data?.signedUrl) throw signErr || new Error('No URL')
     triggerDownload(data.signedUrl, filename)
   } catch (e) {
     alert(`Save failed: ${e.message}`)
