@@ -309,7 +309,10 @@ async function downloadOne(rec) {
       .createSignedUrl(rec.file_path, 300, { download: true })
 
     if (signErr || !data?.signedUrl) throw signErr || new Error('No URL')
-    triggerDownload(data.signedUrl, rec.file_path)
+
+    const ext      = friendlyExt(rec.file_path, rec.mime_type)
+    const filename = `${safeNameSegment(rec.display_name)}.${ext}`
+    triggerDownload(data.signedUrl, filename)
   } catch (e) {
     alert(`Save failed: ${e.message}`)
   } finally {
