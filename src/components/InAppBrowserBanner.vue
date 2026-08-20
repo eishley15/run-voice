@@ -58,8 +58,10 @@ async function copyLink() {
 
 <style scoped>
 .iab-banner {
+  position: relative;
+  z-index: 10;
   background: var(--color-accent-dim);
-  border-bottom: 1px solid #f5cba7;
+  border-bottom: 1px solid var(--accent-terracotta);
   padding: 10px 16px;
   width: 100%;
 }
@@ -84,7 +86,7 @@ async function copyLink() {
 .iab-copy-btn {
   flex-shrink: 0;
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: 3px;
   border: 1.5px solid var(--color-accent);
   background: transparent;
   color: var(--color-accent);
@@ -97,11 +99,11 @@ async function copyLink() {
 .iab-copy-btn:hover,
 .iab-copy-btn:focus-visible {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--surface-page);
   outline: none;
 }
 
 .iab-copy-btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(247, 107, 21, 0.35);
+  box-shadow: 0 0 0 3px var(--accent-terracotta-dim);
 }
 </style>
