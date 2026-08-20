@@ -638,9 +638,19 @@ function formatBytes(bytes) {
   filter: saturate(0.85) contrast(0.96) sepia(0.08);
 }
 
+/* Same fix as .photo-panel__img above, same reason: this used to be
+   position: relative + height: 100% in normal flow, a percentage-height
+   child of .postcard-card (a flex item sized by aspect-ratio) — the
+   exact combination that let real Safari render it short and clip its
+   own bottom border. Absolute + explicit calc() sizing against the
+   padding box fixes it the same way; position: absolute still works as
+   the containing block for .stamp-box's absolute positioning below. */
 .postcard-inner {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
   border: 1px solid var(--pc-cream-line);
   padding: 0.875rem 1.125rem;
   display: flex;
