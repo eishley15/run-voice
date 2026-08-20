@@ -9,17 +9,19 @@
     :class="{ 'waveform-wrap--active': active }"
     aria-hidden="true"
   >
-    <canvas
-      ref="canvasRef"
-      class="waveform-canvas"
-    />
-    <!-- Reduced-motion fallback: a static level indicator that still updates -->
-    <div
-      v-if="reducedMotion && active"
-      class="waveform-level-text"
-      aria-hidden="true"
-    >
-      {{ levelLabel }}
+    <div class="waveform-clip">
+      <canvas
+        ref="canvasRef"
+        class="waveform-canvas"
+      />
+      <!-- Reduced-motion fallback: a static level indicator that still updates -->
+      <div
+        v-if="reducedMotion && active"
+        class="waveform-level-text"
+        aria-hidden="true"
+      >
+        {{ levelLabel }}
+      </div>
     </div>
   </div>
 </template>
@@ -72,10 +74,29 @@ defineExpose({ getCanvas: () => canvasRef.value })
 </script>
 
 <style scoped>
+/*
+  Collapses via grid-template-rows (0fr → 1fr) instead of animating height
+  directly — avoids per-frame layout thrash from a height transition.
+  .waveform-clip is the required min-height:0 + overflow:hidden layer that
+  makes the grid row actually clip during the transition.
+*/
 .waveform-wrap {
   position: relative;
   width: 100%;
-  height: 64px;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease;
+}
+
+/* Only takes up space once it's actually got something to show */
+.waveform-wrap--active {
+  grid-template-rows: 1fr;
+}
+
+.waveform-clip {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,7 +104,7 @@ defineExpose({ getCanvas: () => canvasRef.value })
 
 .waveform-canvas {
   width: 100%;
-  height: 100%;
+  height: clamp(24px, 7vw, 40px);
   display: block;
   opacity: 0;
   transition: opacity 300ms ease;
@@ -103,7 +124,7 @@ defineExpose({ getCanvas: () => canvasRef.value })
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-accent);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 @media (prefers-reduced-motion: reduce) {
