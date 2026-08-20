@@ -64,6 +64,52 @@
 
       <main class="admin-main">
 
+        <!-- Landing page heading editor -->
+        <section class="landing-card" aria-labelledby="landing-heading-title">
+          <div class="landing-card-head">
+            <h2 id="landing-heading-title" class="landing-card-title">Landing page message</h2>
+            <p class="landing-card-sub">Shown as the headline contributors see first.</p>
+          </div>
+
+          <div class="field-wrap landing-textarea-wrap">
+            <textarea
+              v-model="headingDraft"
+              class="field-input landing-textarea"
+              rows="2"
+              maxlength="120"
+              placeholder="Leave a voice message&#10;for the run."
+              @input="headingSaved = false"
+            />
+          </div>
+
+          <div class="landing-preview" aria-label="Preview">
+            <span class="landing-preview-label">Preview</span>
+            <p class="landing-preview-text" v-html="headingPreview" />
+          </div>
+
+          <p v-if="headingError" class="field-error" role="alert">{{ headingError }}</p>
+
+          <div class="landing-card-actions">
+            <button
+              class="btn btn--ghost btn--sm"
+              type="button"
+              :disabled="headingLoading || headingSaving"
+              @click="resetHeadingToDefault"
+            >
+              Reset to default
+            </button>
+            <button
+              class="btn btn--primary btn--sm btn--icon-left"
+              type="button"
+              :disabled="headingLoading || headingSaving || !headingDraft.trim()"
+              @click="saveHeading"
+            >
+              <Loader2 v-if="headingSaving" :size="14" :stroke-width="2" class="icon-spin" />
+              <span>{{ headingSaving ? 'Saving…' : (headingSaved ? 'Saved' : 'Save') }}</span>
+            </button>
+          </div>
+        </section>
+
         <!-- Inline player -->
         <Transition name="player">
           <div v-if="playingId" class="player-bar">
@@ -226,6 +272,7 @@ function tryUnlock() {
   if (passwordInput.value === ADMIN_PASSWORD) {
     unlocked.value = true
     loadRecordings()
+    loadHeading()
   } else {
     wrongPassword.value = true
     passwordInput.value = ''
@@ -271,6 +318,70 @@ async function loadRecordings() {
   } finally {
     loading.value = false
   }
+}
+
+// ── Landing page heading ─────────────────────────────────────────────────
+const DEFAULT_HEADING = 'Leave a voice message\nfor the run.'
+const headingDraft   = ref('')
+const headingLoading = ref(false)
+const headingSaving  = ref(false)
+const headingSaved   = ref(false)
+const headingError   = ref(null)
+
+const headingPreview = computed(() =>
+  (headingDraft.value.trim() || DEFAULT_HEADING).replace(/\n/g, '<br />')
+)
+
+async function loadHeading() {
+  headingLoading.value = true
+  headingError.value   = null
+
+  try {
+    const { data, error: dbErr } = await adminClient
+      .from('site_settings')
+      .select('heading')
+      .eq('id', 'landing')
+      .single()
+
+    if (dbErr) throw dbErr
+    headingDraft.value = (data?.heading || DEFAULT_HEADING).replace(/<br\s*\/?>/gi, '\n')
+  } catch (e) {
+    headingError.value = e.message || 'Failed to load landing page message'
+    headingDraft.value = DEFAULT_HEADING
+  } finally {
+    headingLoading.value = false
+  }
+}
+
+async function saveHeading() {
+  const trimmed = headingDraft.value.trim()
+  if (!trimmed) {
+    headingError.value = 'Message cannot be empty.'
+    return
+  }
+
+  headingSaving.value = true
+  headingError.value  = null
+
+  try {
+    const { error: dbErr } = await adminClient
+      .from('site_settings')
+      .update({ heading: trimmed.replace(/\n/g, '<br />'), updated_at: new Date().toISOString() })
+      .eq('id', 'landing')
+
+    if (dbErr) throw dbErr
+    headingSaved.value = true
+  } catch (e) {
+    headingError.value = e.message || 'Failed to save landing page message'
+  } finally {
+    headingSaving.value = false
+  }
+}
+
+function resetHeadingToDefault() {
+  headingDraft.value = DEFAULT_HEADING
+  headingSaved.value = false
+  headingError.value = null
 }
 
 // ── Playback ──────────────────────────────────────────────────────────────
@@ -338,24 +449,15 @@ async function downloadOne(rec) {
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────
+// Deliberately DB-only: the storage object is never removed, so the bucket
+// keeps every recording as a backup even after it's deleted from the admin
+// list. Clearing the bucket, if ever needed, is a separate manual step.
 async function deleteOne(rec) {
   const label = rec.display_name || 'Anonymous'
   if (!confirm(`Delete the recording from ${label}? This can't be undone.`)) return
 
   rec.deleting = true
   try {
-    // Remove the storage object first, then the DB row — so a failed row
-    // delete never leaves a DB-only entry with no matching file.
-    const { error: storageErr } = await adminClient.storage
-      .from(BUCKET)
-      .remove([rec.file_path])
-
-    // Missing-file errors are fine here — the object may already be gone
-    // (e.g. deleted directly from the bucket); still clean up the DB row.
-    if (storageErr && !/not.*found/i.test(storageErr.message || '')) {
-      throw storageErr
-    }
-
     const { error: dbErr } = await adminClient
       .from('run_messages')
       .delete()
@@ -597,6 +699,72 @@ function formatDate(iso) {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
+}
+
+/* ── Landing page heading editor ─────────────────────────────────────── */
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.landing-card-head { display: flex; flex-direction: column; gap: 0.125rem; }
+
+.landing-card-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.landing-card-sub {
+  font-size: 0.78125rem;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.landing-textarea-wrap { width: 100%; }
+
+.landing-textarea {
+  resize: vertical;
+  min-height: 3.5rem;
+  line-height: 1.4;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.landing-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+}
+
+.landing-preview-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.landing-preview-text {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.landing-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ── Player bar ──────────────────────────────────────────────────────── */

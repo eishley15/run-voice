@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Display font — headline/title moments only. Body text stays DM Sans. */
+@font-face {
+  font-family: 'DxGrafik';
+  src: url('./assets/fonts/DxGrafik-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* CSS custom properties — all design tokens live here */
 :root {
   --color-bg:         #FAF8F5;
@@ -12,6 +21,8 @@
   --color-muted:      #8C8680;
   --color-accent:     #F76B15;
   --color-accent-dim: #FDE8D8;
+
+  --font-display: 'DxGrafik', Georgia, serif;
 }
 
 html, body {

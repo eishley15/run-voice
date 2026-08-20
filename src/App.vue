@@ -39,7 +39,7 @@
         <!-- ── INTRO ────────────────────────────────────────────────── -->
         <div v-if="state === 'intro'" key="intro" class="view-upper">
           <header class="intro-header">
-            <h1 class="headline">Leave a voice message<br />for the run.</h1>
+            <h1 class="headline" v-html="headline"></h1>
             <p class="subhead">
               Record something — a cheer, a story, a favourite lyric.
               Only the runner will hear it.
@@ -292,9 +292,29 @@ import { getInAppBrowserStatus } from './utils/inAppBrowser.js'
 import { useRecorder }   from './composables/useRecorder.js'
 import { useUpload }     from './composables/useUpload.js'
 import { useIndexedDB }  from './composables/useIndexedDB.js'
+import { supabase }      from './utils/supabase.js'
 
 // ── In-app browser ────────────────────────────────────────────────────────────
 const iabStatus = ref(getInAppBrowserStatus())
+
+// ── Admin-editable landing heading ────────────────────────────────────────────
+const DEFAULT_HEADLINE = 'Leave a voice message<br />for the run.'
+const headline = ref(DEFAULT_HEADLINE)
+
+async function loadHeadline() {
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('heading')
+      .eq('id', 'landing')
+      .single()
+
+    if (error) throw error
+    if (data?.heading?.trim()) headline.value = data.heading
+  } catch (e) {
+    console.error('[voice-app] Failed to load custom heading, using default.', e)
+  }
+}
 
 // ── Destructure so all refs auto-unwrap in the template ───────────────────────
 const {
@@ -359,6 +379,7 @@ function beforeUnloadGuard(e) {
 onMounted(() => {
   window.addEventListener('beforeunload', beforeUnloadGuard)
   checkForOrphan()
+  loadHeadline()
 })
 onBeforeUnmount(() => { window.removeEventListener('beforeunload', beforeUnloadGuard) })
 
@@ -486,10 +507,10 @@ function formatBytes(bytes) {
 .intro-header { display: flex; flex-direction: column; gap: 0.75rem; }
 
 .headline {
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: clamp(1.75rem, 5vw, 2.5rem);
   line-height: 1.15;
-  font-weight: 400;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
 }
@@ -609,8 +630,8 @@ function formatBytes(bytes) {
 /* ── Preview ─────────────────────────────────────────────────────────────── */
 .preview-header { display: flex; flex-direction: column; gap: 0.25rem; }
 .preview-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.75rem; font-weight: 400; margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem; font-weight: 600; margin: 0;
 }
 .preview-meta { font-size: 0.875rem; color: var(--color-muted); margin: 0; }
 .preview-player { width: 100%; border-radius: 8px; }
@@ -618,17 +639,17 @@ function formatBytes(bytes) {
 
 /* ── Section title (uploading / success / error) ─────────────────────────── */
 .section-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.75rem; font-weight: 400; margin: 0; text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.75rem; font-weight: 600; margin: 0; text-align: center;
 }
 
 /* ── Progress bar ────────────────────────────────────────────────────────── */
 .progress-bar-wrap {
-  width: 100%; max-width: 20rem; height: 6px;
-  background: var(--color-border); border-radius: 3px; overflow: hidden;
+  width: 100%; max-width: 20rem; height: 8px;
+  background: var(--color-border); border-radius: 4px; overflow: hidden;
 }
 .progress-bar {
-  height: 100%; background: var(--color-accent); border-radius: 3px;
+  height: 100%; background: var(--color-accent); border-radius: 4px;
   width: 100%;
   transform: scaleX(0);
   transform-origin: left center;
@@ -651,8 +672,11 @@ function formatBytes(bytes) {
 }
 .error-body p { margin: 0 0 0.75rem; }
 .error-steps {
-  padding-left: 1.25rem; display: flex; flex-direction: column;
-  gap: 0.5rem; margin: 0.5rem 0 0; color: var(--color-text);
+  padding: 0.875rem 1rem 0.875rem 2rem;
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+  display: flex; flex-direction: column;
+  gap: 0.625rem; margin: 0.75rem 0 0; color: var(--color-text);
 }
 .error-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
 
@@ -671,8 +695,8 @@ function formatBytes(bytes) {
   display: flex; flex-direction: column; gap: 1rem; text-align: center;
 }
 .orphan-title, .confirm-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.25rem; font-weight: 400; margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem; font-weight: 600; margin: 0;
 }
 .orphan-body, .confirm-body {
   font-size: 0.875rem; color: var(--color-muted); line-height: 1.5; margin: 0;
@@ -694,10 +718,10 @@ function formatBytes(bytes) {
 .btn:active { transform: scale(0.97); }
 
 .btn--primary { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
-.btn--primary:hover { background: #e05e0f; border-color: #e05e0f; }
+.btn--primary:hover { background: #e05e0f; border-color: #e05e0f; box-shadow: 0 4px 16px rgba(247,107,21,0.25); }
 
 .btn--ghost { background: transparent; color: var(--color-text); border-color: var(--color-border); }
-.btn--ghost:hover { background: var(--color-bg-subtle); }
+.btn--ghost:hover { background: var(--color-bg-subtle); border-color: var(--color-text); }
 
 .btn--danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 .btn--danger:hover { background: #a93226; border-color: #a93226; }

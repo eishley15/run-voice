@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['"DM Serif Display"', 'Georgia', 'serif'],
-        sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
+        serif:   ['"DM Serif Display"', 'Georgia', 'serif'],
+        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
+        display: ['"DxGrafik"', 'Georgia', 'serif'],
       },
       colors: {
         bg:      '#FAF8F5',
