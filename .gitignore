@@ -6,3 +6,18 @@ dist/
 .DS_Store
 .env
 .vercel
+
+# Agent tooling / orchestrator configs — not part of the shipped app
+.agents/
+.claude/
+.codex/
+.impeccable/
+
+# Internal orchestrator docs & memory — not needed on GitHub
+CLAUDE.md
+SOUL.md
+YAML-MEMORY-MIGRATION-COMPLETE.md
+voice-messages-plan.yaml
+
+# Downloaded/local voice recordings — user content, not source
+recordings/

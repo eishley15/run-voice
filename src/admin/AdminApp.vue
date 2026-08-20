@@ -167,6 +167,17 @@
                 <Download v-else :size="14" :stroke-width="2" />
                 <span>{{ rec.downloading ? 'Saving…' : 'Save' }}</span>
               </button>
+
+              <button
+                class="btn btn--ghost btn--sm btn--icon-left btn--danger"
+                :aria-label="`Delete message from ${rec.display_name || 'Anonymous'}`"
+                :disabled="rec.deleting"
+                @click="deleteOne(rec)"
+              >
+                <Loader2 v-if="rec.deleting" :size="14" :stroke-width="2" class="icon-spin" />
+                <Trash2  v-else :size="14" :stroke-width="2" />
+                <span>{{ rec.deleting ? 'Deleting…' : 'Delete' }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -192,6 +203,7 @@ import {
   WifiOff,
   RefreshCw,
   Loader2,
+  Trash2,
 } from '@lucide/vue'
 
 // ── Supabase admin client ─────────────────────────────────────────────────
@@ -252,6 +264,7 @@ async function loadRecordings() {
       size_kb:     sizeMap[r.file_path] ?? null,
       downloading: false,
       loadingPlay: false,
+      deleting:    false,
     }))
   } catch (e) {
     error.value = e.message || 'Unknown error'
@@ -321,6 +334,40 @@ async function downloadOne(rec) {
     alert(`Save failed: ${e.message}`)
   } finally {
     rec.downloading = false
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────
+async function deleteOne(rec) {
+  const label = rec.display_name || 'Anonymous'
+  if (!confirm(`Delete the recording from ${label}? This can't be undone.`)) return
+
+  rec.deleting = true
+  try {
+    // Remove the storage object first, then the DB row — so a failed row
+    // delete never leaves a DB-only entry with no matching file.
+    const { error: storageErr } = await adminClient.storage
+      .from(BUCKET)
+      .remove([rec.file_path])
+
+    // Missing-file errors are fine here — the object may already be gone
+    // (e.g. deleted directly from the bucket); still clean up the DB row.
+    if (storageErr && !/not.*found/i.test(storageErr.message || '')) {
+      throw storageErr
+    }
+
+    const { error: dbErr } = await adminClient
+      .from('run_messages')
+      .delete()
+      .eq('id', rec.id)
+
+    if (dbErr) throw dbErr
+
+    if (playingId.value === rec.id) closePlayer()
+    recordings.value = recordings.value.filter(r => r.id !== rec.id)
+  } catch (e) {
+    alert(`Delete failed: ${e.message}`)
+    rec.deleting = false
   }
 }
 
@@ -763,6 +810,12 @@ function formatDate(iso) {
   background: var(--color-accent);
   color: #fff;
   border-color: var(--color-accent);
+}
+
+.btn--danger:not(:disabled):hover {
+  background: #fdecea;
+  border-color: #c0392b;
+  color: #c0392b;
 }
 
 .btn--sm { padding: 0.3125rem 0.625rem; font-size: 0.8125rem; min-height: 30px; }
