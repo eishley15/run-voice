@@ -584,6 +584,7 @@ function formatBytes(bytes) {
    with clamp()/mobile overrides to fit the fixed box instead. ─────────── */
 .photo-panel,
 .postcard-card {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 2;
   /* Flex items with an aspect-ratio still expand past it if their content
@@ -591,7 +592,13 @@ function formatBytes(bytes) {
      unless overflow is set to something other than visible. This is what
      was letting the text-heavy back card grow taller than the front
      card; overflow: hidden here (on the flex item itself, not just its
-     inner content wrapper) pins both cards to the exact same size. */
+     inner content wrapper) pins both cards to the exact same size.
+     flex-shrink: 0 is needed too — without it, some engines (seen on
+     real iOS Safari, not reproducible in desktop devtools) shrink an
+     aspect-ratio flex item below its ratio-derived height when combined
+     with a percentage-sized child (the photo below), silently clipping
+     the bottom few px of the card. */
+  flex-shrink: 0;
   overflow: hidden;
   background: var(--pc-cream);
   background-image: var(--pc-grain);
@@ -603,13 +610,28 @@ function formatBytes(bytes) {
     0 1px 1px rgba(0, 0, 0, 0.15),
     0 18px 34px -14px rgba(0, 0, 0, 0.55);
 }
-.postcard-card {
-  position: relative;
-}
 
+/* Absolutely positioned (instead of width/height: 100% in normal flow) so
+   it never depends on percentage-height resolving against an
+   aspect-ratio + flexbox parent — that combination is where real Safari
+   has diverged from desktop Chrome/devtools in testing, cropping the
+   image's bottom edge. An abspos element's containing block is always
+   definitively sized (the nearest positioned ancestor's padding box), so
+   percentage width/height on it resolves reliably everywhere, unlike a
+   normal-flow flex-item child. top/left: 7px restates .photo-panel's
+   padding (an abspos child's containing block is the padding box, which
+   would otherwise cover it); width/height then have to subtract that
+   same 7px back out on both sides — plain width/height: 100% here would
+   cover the padding too. (`width: auto` + `inset: 7px` was tried first
+   and does NOT stretch a replaced element like <img> to fit — replaced
+   elements fall back to intrinsic size when width/height is auto, even
+   with all four inset offsets set, so the size has to be explicit.) */
 .photo-panel__img {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
   object-fit: cover;
   display: block;
   border: 1px solid var(--pc-cream-line);
@@ -807,29 +829,35 @@ function formatBytes(bytes) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(0.25rem, 1.4vw, 0.625rem);
+  gap: clamp(0.125rem, 1.1vw, 0.5rem);
   min-height: 0;
 }
 
 .headline {
   font-family: var(--font-script);
   font-weight: 700;
-  font-size: clamp(0.625rem, 3vw, 1.0625rem);
+  font-size: clamp(0.5rem, 2.75vw, 0.9375rem);
   line-height: 1.1;
   color: var(--pc-ink);
   margin: 0;
 }
 
-/* Body message — a distinct vintage hand from the headline/signature, with
-   a faint ink-bleed text-shadow so it reads as pressed pen on paper. */
+/* Body message — a distinct vintage hand from the headline/signature.
+   Sizing here is intentionally NOT tuned to fill .postcard-inner's
+   overflow:hidden box exactly — it carries a safety margin below the
+   fallback-font size, so text still fits before Google Fonts finish
+   loading (display=swap paints Kalam's fallback immediately) and across
+   engines with slightly different metrics for the same font. Below
+   ~380px width the clamp() floor (not the vw term) is what's actually
+   in effect for most phones, so the floor itself is what was verified
+   against the fallback-font measurement down to a 360px-wide viewport. */
 .subhead {
   font-family: var(--font-message);
   font-weight: 400;
-  font-size: clamp(0.5625rem, 2.3vw, 0.8125rem);
-  line-height: 1.35;
+  font-size: clamp(0.4375rem, 2.1vw, 0.75rem);
+  line-height: 1.25;
   letter-spacing: 0.01em;
   color: var(--pc-ink);
-  text-shadow: 0 0.5px 0 oklch(0.32 0.03 50 / 0.25);
   max-width: 26rem;
   margin: 0;
 }
@@ -837,11 +865,10 @@ function formatBytes(bytes) {
 .closing {
   font-family: var(--font-message);
   font-weight: 700;
-  font-size: clamp(0.625rem, 2.4vw, 0.875rem);
-  line-height: 1.3;
+  font-size: clamp(0.5rem, 2.2vw, 0.8125rem);
+  line-height: 1.2;
   letter-spacing: 0.01em;
   color: var(--pc-ink);
-  text-shadow: 0 0.5px 0 oklch(0.32 0.03 50 / 0.25);
   max-width: 24rem;
   margin: 0;
 }
@@ -849,7 +876,7 @@ function formatBytes(bytes) {
 .signoff-name {
   font-family: var(--font-script);
   font-weight: 700;
-  font-size: clamp(0.75rem, 3.2vw, 1.125rem);
+  font-size: clamp(0.625rem, 2.9vw, 1rem);
   color: var(--pc-ink);
   margin: 0;
 }
